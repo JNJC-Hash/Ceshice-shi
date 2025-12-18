@@ -1,0 +1,306 @@
+
+                <!DOCTYPE html>
+                <html lang="zh">
+                <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <meta name="color-scheme" content="light">
+                  <meta name="supported-color-schemes" content="light">
+                  <title>Delete Website Confirmation</title>
+                  <style>
+                    *,
+                    *::before,
+                    *::after {
+                      box-sizing: border-box;
+                      margin: 0;
+                    }
+                    .iframe-outer {
+                      position: fixed;
+                      top: 0;
+                      left: 0;
+                      bottom: 0;
+                      right: 0;
+                      display: flex;
+                      justify-content: center;
+                      background-color: #E0E0E0;
+                    }
+                    .iframe-wrapper {
+                      width: 100%;
+                      height: 100%;
+                      margin: 0 auto;
+                      transform-origin: center top;
+                      flex-shrink: 0;
+                    }
+                    #dynamicIframe {
+                      border: none;
+                      width: 100%;
+                      height: 100%;
+                    }
+                  </style>
+                  <script>
+                const width = 1440
+                const height = 1024
+                const resolutionRatio = width && height ? width / height : 1
+                const pageNameMap = {
+                  'all_websites_dashboard': 'All Websites Dashboard',
+    'add_website_form': 'Add New Website',
+    'edit_website_form': 'Edit Website Details',
+    'delete_website_confirmation': 'Delete Website Confirmation',
+    'all_websites_listing': 'All Websites Listing'
+                }
+                const allPageIds = ["all_websites_dashboard","add_website_form","edit_website_form","delete_website_confirmation","all_websites_listing"]
+                const allFormatPageIdsMap = {"all_websites_dashboard":"all-websites-dashboard","add_website_form":"add-website-form","edit_website_form":"edit-website-form","delete_website_confirmation":"delete-website-confirmation","all_websites_listing":"all-websites-listing"}
+                const IFRAME_MESSAGE_TYPE = {
+                  iframeNavigation: 'iframeNavigation',
+                }
+                const safeAddEventListener = function Tc(e,t,r,n=!1){e.removeEventListener(t,r,n),e.addEventListener(t,r,n)}
+                const processOnclick = (e,t,r)=>{if(r){const n=Pw(t);if(n.methodName&&Lp(n.methodName,r))return;e.preventDefault(),e.stopPropagation();const s=n.args||[],i=(s==null?void 0:s.find(u=>u))||"";i&&Mp(i)}}
+                const checkIframeMethod = (e,t)=>{try{return typeof t[e]=="function"||typeof t[e]=="function"}catch(r){return!1}}
+                const postIframeMessage = (targetPageId) => {
+                  window.parent.postMessage({
+                    type: IFRAME_MESSAGE_TYPE.iframeNavigation,
+                    targetPageId,
+                  })
+                }
+                const handleIframeLinkClick = (event) => {
+                  const dynamicIframe = document.querySelector('#dynamicIframe')
+                  if (!dynamicIframe?.contentWindow) {
+                    return
+                  }
+                  const link = event.target.closest('a')
+                  const target = event.target
+                  if (link) {
+                    const href = link.getAttribute('href')
+                    const onclick = link.getAttribute('onclick')
+                    if (href && href !== '#' && !href.startsWith('javascript:')) {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      const targetPageId = getKeyByValueObj(allFormatPageIdsMap, href)
+                      if (targetPageId) {
+                        postIframeMessage(targetPageId)
+                      }
+                      return
+                    }
+                    if (onclick) {
+                      processOnclick(event, onclick, iframe.contentWindow, allFormatPageIdsMap)
+                    } else {
+                      event.preventDefault()
+                      event.stopPropagation() 
+                    }
+                    return
+                  }
+                  const onclick = target.getAttribute('onclick')
+                  if (onclick) {
+                    processOnclick(event, onclick, iframe.contentWindow, allFormatPageIdsMap)
+                  }
+                }
+                function stringExt(link) {
+                  let s = String(link || '')
+                  s = (s.split('#')[0] || '')
+                  s = (s.split('?')[0] || '')
+                  s = s.trim()
+                  s = s.split('/').filter(Boolean).pop() || ''
+                  const lower = s.toLowerCase()
+                  if (lower.endsWith('.html') || lower.endsWith('.php') || lower.endsWith('.aspx')) {
+                    s = s.slice(0, s.lastIndexOf('.'))
+                  }
+                  return s
+                }
+                function formatHref(href) {
+                  if (!href) {
+                    return ''
+                  }
+                  try {
+                    const url = new URL(href, window.location.href)
+                    const pathname = url.pathname || ''
+                    return stringExt(pathname)
+                  } catch {
+                    return stringExt(href)
+                  }
+                }
+                function getKeyByValueObj(obj, value) {
+                  const newValue = formatHref(value)
+                  const keyFind = Object.keys(obj).find(k => k === newValue)
+                  if (keyFind) {
+                    return keyFind
+                  }
+                  return Object.keys(obj).find(k => obj[k] === newValue)
+                }
+                function setIframeSize(w, h) {
+                  const currentContainerRadio = w / h
+                  let widthValue = w
+                  let heightValue = h
+                  let zoom = 1
+                  if (currentContainerRadio > resolutionRatio) {
+                    widthValue = h * resolutionRatio
+                    heightValue = h
+                  } else {
+                    widthValue = w
+                    heightValue = w / resolutionRatio
+                  }
+                  zoom = width ? widthValue / width : 1
+                  return {
+                    width: widthValue / zoom + 'px',
+                    height: heightValue / zoom + 'px',
+                    zoom,
+                  }
+                }
+                function adjustIframeSize() {
+                  const iframeWrapper = document.querySelector(".iframe-wrapper")
+                  const { width, height, zoom } = setIframeSize(window.innerWidth, window.innerHeight)
+                  iframeWrapper.style.height = height
+                  iframeWrapper.style.width = width
+                  iframeWrapper.style.transform = 'scale(' + zoom + ')'
+                }
+                function sanitizeFilename(name) {
+                  return name.replace(/[\/:*?"<>|]/g, '_')
+                }
+                function handlePostMessage(event) {
+                  if (!event.data) {
+                    return
+                  }
+                  const { type, targetPageId } = event.data
+                  const targetPageName = pageNameMap[targetPageId]
+                  if (type === "iframeNavigation" && targetPageId && targetPageName) {
+                    window.location.href = targetPageName + '.html'
+                  }
+                }
+                function setupIframeEvents() {
+                  const iframe = document.getElementById('dynamicIframe')
+                  if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
+                    safeAddEventListener(iframe.contentWindow.document, 'click', handleIframeLinkClick, true)
+                  } else {
+                    setTimeout(setupIframeEvents, 100)
+                  }
+                }
+                window.addEventListener('message', handlePostMessage)
+                window.onload = function() {
+                  adjustIframeSize()
+                  setupIframeEvents()
+                }
+                window.onresize = adjustIframeSize
+                window.onunload = () => {
+                  window.removeEventListener('message', handlePostMessage)
+                }
+              </script>
+                </head>
+                <body>
+                  <div class="iframe-outer">
+                    <div class="iframe-wrapper">
+                      <iframe id="dynamicIframe" srcdoc='<html data-source-file="src/layouts/BaseLayout.astro" data-source-line-start="11" data-source-line-end="21" lang="en"><head data-source-file="src/layouts/BaseLayout.astro" data-source-line-start="12" data-source-line-end="17"><script>(function(){
+      function stringExt(link) {
+        let s = String(link || &#39;&#39;)
+        s = (s.split(&#39;#&#39;)[0] || &#39;&#39;)
+        s = (s.split(&#39;?&#39;)[0] || &#39;&#39;)
+        s = s.trim()
+        s = s.split(&#39;/&#39;).filter(Boolean).pop() || &#39;&#39;
+        const lower = s.toLowerCase()
+        if (lower.endsWith(&#39;.html&#39;) || lower.endsWith(&#39;.php&#39;) || lower.endsWith(&#39;.aspx&#39;)) {
+          s = s.slice(0, s.lastIndexOf(&#39;.&#39;))
+        }
+        return s
+      }
+      function formatHref(href) {
+        if (!href) {
+          return &#39;&#39;
+        }
+        try {
+          const url = new URL(href, window.location.href)
+          const pathname = url.pathname || &#39;&#39;
+          return stringExt(pathname)
+        } catch {
+          return stringExt(href)
+        }
+      }
+      function getKeyByValueObj(obj, value) {
+        const newValue = formatHref(value)
+        const keyFind = Object.keys(obj).find(k => k === newValue)
+        if (keyFind) {
+          return keyFind
+        }
+        return Object.keys(obj).find(k => obj[k] === newValue)
+      }
+      function emit(to, source){
+        try {
+          if (window.parent) {
+            const allFormatPageIdsMap = {"all_websites_dashboard":"all-websites-dashboard","add_website_form":"add-website-form","edit_website_form":"edit-website-form","delete_website_confirmation":"delete-website-confirmation","all_websites_listing":"all-websites-listing"}
+            const IFRAME_MESSAGE_TYPE = {
+              iframeNavigation: &#39;iframeNavigation&#39;,
+            }
+            const targetPageId = getKeyByValueObj(allFormatPageIdsMap, String(to || &#39;&#39;))
+            if (targetPageId) {
+              window.parent.postMessage({
+                type: IFRAME_MESSAGE_TYPE.iframeNavigation,
+                targetPageId,
+              }, &#39;*&#39;)
+            }
+          }
+        } catch(e) {}
+      }
+      try{
+        if (&#39;navigation&#39; in window &amp;&amp; window.navigation &amp;&amp; typeof window.navigation.addEventListener===&#39;function&#39;){
+          window.navigation.addEventListener(&#39;navigate&#39;, function(e){
+            try{
+              var url = (e.destination &amp;&amp; e.destination.url) || &#39;&#39;;
+              if (e.canIntercept &amp;&amp; typeof e.intercept===&#39;function&#39;){ e.intercept({ handler:function(){} }) }
+              else if (e.preventDefault){ e.preventDefault() }
+              emit(url)
+            }catch(_){}
+          })
+        }
+      }catch(_){}
+    })();</script><meta name="supported-color-schemes" content="light"><meta name="color-scheme" content="light"><style>
+      :root, html, body { color-scheme: light; }
+      html { forced-color-adjust: none; }
+    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Built with Astro">
+    <title data-source-file="src/layouts/BaseLayout.astro" data-source-line-start="16" data-source-line-end="16">Delete Website - QuickNav Pro</title>
+  <link rel="stylesheet" href="./assets/html/74784/add-website-form.e2ye_R_f.css">
+<style>.transition-all[data-v-0632d593]{transition:all .3s cubic-bezier(.4,0,.2,1)}
+</style><script src="./assets/static/uxbot/25_6/holder.js"></script></head>
+  <body data-source-file="src/layouts/BaseLayout.astro" data-source-line-start="18" data-source-line-end="20">
+    
+  <style>astro-island,astro-slot,astro-static-slot{display:contents}</style><script>(()=>{var e=async t=>{await(await t())()};(self.Astro||(self.Astro={})).load=e;window.dispatchEvent(new Event("astro:load"));})();</script><script>(()=>{var A=Object.defineProperty;var g=(i,o,a)=>o in i?A(i,o,{enumerable:!0,configurable:!0,writable:!0,value:a}):i[o]=a;var d=(i,o,a)=>g(i,typeof o!="symbol"?o+"":o,a);{let i={0:t=>m(t),1:t=>a(t),2:t=>new RegExp(t),3:t=>new Date(t),4:t=>new Map(a(t)),5:t=>new Set(a(t)),6:t=>BigInt(t),7:t=>new URL(t),8:t=>new Uint8Array(t),9:t=>new Uint16Array(t),10:t=>new Uint32Array(t),11:t=>1/0*t},o=t=>{let[l,e]=t;return l in i?i[l](e):void 0},a=t=>t.map(o),m=t=>typeof t!="object"||t===null?t:Object.fromEntries(Object.entries(t).map(([l,e])=>[l,o(e)]));class y extends HTMLElement{constructor(){super(...arguments);d(this,"Component");d(this,"hydrator");d(this,"hydrate",async()=>{var b;if(!this.hydrator||!this.isConnected)return;let e=(b=this.parentElement)==null?void 0:b.closest("astro-island[ssr]");if(e){e.addEventListener("astro:hydrate",this.hydrate,{once:!0});return}let c=this.querySelectorAll("astro-slot"),n={},h=this.querySelectorAll("template[data-astro-template]");for(let r of h){let s=r.closest(this.tagName);s!=null&amp;&amp;s.isSameNode(this)&amp;&amp;(n[r.getAttribute("data-astro-template")||"default"]=r.innerHTML,r.remove())}for(let r of c){let s=r.closest(this.tagName);s!=null&amp;&amp;s.isSameNode(this)&amp;&amp;(n[r.getAttribute("name")||"default"]=r.innerHTML)}let p;try{p=this.hasAttribute("props")?m(JSON.parse(this.getAttribute("props"))):{}}catch(r){let s=this.getAttribute("component-url")||"<unknown>",v=this.getAttribute("component-export");throw v&amp;&amp;(s+=` (export ${v})`),console.error(`[hydrate] Error parsing props for component ${s}`,this.getAttribute("props"),r),r}let u;await this.hydrator(this)(this.Component,p,n,{client:this.getAttribute("client")}),this.removeAttribute("ssr"),this.dispatchEvent(new CustomEvent("astro:hydrate"))});d(this,"unmount",()=>{this.isConnected||this.dispatchEvent(new CustomEvent("astro:unmount"))})}disconnectedCallback(){document.removeEventListener("astro:after-swap",this.unmount),document.addEventListener("astro:after-swap",this.unmount,{once:!0})}connectedCallback(){if(!this.hasAttribute("await-children")||document.readyState==="interactive"||document.readyState==="complete")this.childrenConnectedCallback();else{let e=()=>{document.removeEventListener("DOMContentLoaded",e),c.disconnect(),this.childrenConnectedCallback()},c=new MutationObserver(()=>{var n;((n=this.lastChild)==null?void 0:n.nodeType)===Node.COMMENT_NODE&amp;&amp;this.lastChild.nodeValue==="astro:end"&amp;&amp;(this.lastChild.remove(),e())});c.observe(this,{childList:!0}),document.addEventListener("DOMContentLoaded",e)}}async childrenConnectedCallback(){let e=this.getAttribute("before-hydration-url");e&amp;&amp;await import(e),this.start()}async start(){let e=JSON.parse(this.getAttribute("opts")),c=this.getAttribute("client");if(Astro[c]===void 0){window.addEventListener(`astro:${c}`,()=>this.start(),{once:!0});return}try{await Astro[c](async()=>{let n=this.getAttribute("renderer-url"),[h,{default:p}]=await Promise.all([import(this.getAttribute("component-url")),n?import(n):()=>()=>{}]),u=this.getAttribute("component-export")||"default";if(!u.includes("."))this.Component=h[u];else{this.Component=h;for(let f of u.split("."))this.Component=this.Component[f]}return this.hydrator=p,this.hydrate},e,this)}catch(n){console.error(`[astro-island] Error hydrating ${this.getAttribute("component-url")}`,n)}}attributeChangedCallback(){this.hydrate()}}d(y,"observedAttributes",["props"]),customElements.get("astro-island")||customElements.define("astro-island",y)}})();</script><astro-island uid="1banUF" prefix="s0" component-url="https://uxbot-prod-public.s3.cn-north-1.amazonaws.com.cn/html/74784/CommonHeader.C8XiA-sp.js" component-export="default" renderer-url="https://uxbot-prod-public.s3.cn-north-1.amazonaws.com.cn/html/74784/client.C0EXU88P.js" props="{}" ssr="" client="load" opts="{&amp;quot;name&amp;quot;:&amp;quot;CommonHeader&amp;quot;,&amp;quot;value&amp;quot;:true}" await-children=""><header class="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border shadow-card" data-source-file="src/components/common/CommonHeader.vue" data-source-line-start="60" data-source-line-end="125"><div class="container mx-auto px-4 md:px-6 py-3 md:py-4" data-source-file="src/components/common/CommonHeader.vue" data-source-line-start="61" data-source-line-end="124"><div class="flex items-center justify-between gap-4" data-source-file="src/components/common/CommonHeader.vue" data-source-line-start="62" data-source-line-end="123"><a href="./all-websites-dashboard.html" class="flex items-center gap-3 group flex-shrink-0" data-source-file="src/components/common/CommonHeader.vue" data-source-line-start="64" data-source-line-end="71"><div class="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center text-primary-foreground font-bold text-sm shadow-lg group-hover:scale-105 transition-transform glow-primary" data-source-file="src/components/common/CommonHeader.vue" data-source-line-start="65" data-source-line-end="67"> QN </div><span class="hidden sm:inline text-xl font-bold text-gradient-primary" data-source-file="src/components/common/CommonHeader.vue" data-source-line-start="68" data-source-line-end="70"> QuickNav Pro </span></a><div class="flex-1 max-w-xl mx-4 relative" data-source-file="src/components/common/CommonHeader.vue" data-source-line-start="74" data-source-line-end="87"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground lucide-search-icon lucide-search absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" data-source-file="src/components/common/SafeIcon.vue" data-source-line-start="43" data-source-line-end="49"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg><input class="flex h-10 border px-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-foreground file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-full pl-10 pr-4 py-2 bg-muted/50 border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all" type="search" placeholder="Search websites... (Ctrl+K)" data-source-file="src/components/ui/input/Input.vue" data-source-line-start="23" data-source-line-end="23" value=""></div><div class="flex items-center gap-2 md:gap-3" data-source-file="src/components/common/CommonHeader.vue" data-source-line-start="90" data-source-line-end="122"><button class="items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;amp;_svg]:pointer-events-none [&amp;amp;_svg]:size-4 [&amp;amp;_svg]:shrink-0 hover:text-accent-foreground hidden md:flex w-10 h-10 rounded-lg bg-muted/50 hover:bg-muted border border-border hover:border-primary/50 transition-all" title="Toggle View" data-source-file="src/components/ui/button/Button.vue" data-source-line-start="21" data-source-line-end="27"><!--[--><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-source-file="src/components/common/SafeIcon.vue" data-source-line-start="43" data-source-line-end="49" class="lucide lucide-layout-grid-icon lucide-layout-grid"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></svg><!--]--></button><button class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;amp;_svg]:pointer-events-none [&amp;amp;_svg]:size-4 [&amp;amp;_svg]:shrink-0 hover:text-accent-foreground w-10 h-10 rounded-lg bg-muted/50 hover:bg-muted border border-border hover:border-primary/50 transition-all" title="Switch to Light Mode" data-source-file="src/components/ui/button/Button.vue" data-source-line-start="21" data-source-line-end="27"><!--[--><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-source-file="src/components/common/SafeIcon.vue" data-source-line-start="43" data-source-line-end="49" class="lucide lucide-moon-icon lucide-moon"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path></svg><!--]--></button><button class="justify-center whitespace-nowrap ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;amp;_svg]:pointer-events-none [&amp;amp;_svg]:size-4 [&amp;amp;_svg]:shrink-0 h-10 px-4 md:px-5 py-2 md:py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-semibold text-sm flex items-center gap-2 shadow-lg glow-primary hover:scale-105 transition-all" data-source-file="src/components/ui/button/Button.vue" data-source-line-start="21" data-source-line-end="27"><!--[--><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-source-file="src/components/common/SafeIcon.vue" data-source-line-start="43" data-source-line-end="49" class="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg><span class="hidden sm:inline" data-source-file="src/components/common/CommonHeader.vue" data-source-line-start="120" data-source-line-end="120">Add Website</span><!--]--></button></div></div></div></header><!--astro:end--></astro-island>
+  <main data-source-file="src/pages/delete-website-confirmation.astro" data-source-line-start="10" data-source-line-end="12" class="flex-1 flex items-center justify-center min-h-[calc(100vh-64px)] bg-gradient-to-br from-background via-background to-background/80 p-4">
+    <astro-island uid="Z1PN1Bf" prefix="s1" component-url="https://uxbot-prod-public.s3.cn-north-1.amazonaws.com.cn/html/74784/DeleteWebsiteConfirmation.alOk0bgP.js" component-export="default" renderer-url="https://uxbot-prod-public.s3.cn-north-1.amazonaws.com.cn/html/74784/client.C0EXU88P.js" props="{}" ssr="" client="load" opts="{&amp;quot;name&amp;quot;:&amp;quot;DeleteWebsiteConfirmation&amp;quot;,&amp;quot;value&amp;quot;:true}" await-children=""><div class="w-full max-w-2xl mx-auto transition-all duration-300 opacity-100 scale-100" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="72" data-source-line-end="222" data-v-0632d593=""><div class="relative w-full rounded-lg border p-4 [&amp;amp;&amp;gt;svg~*]:pl-7 [&amp;amp;&amp;gt;svg+div]:translate-y-[-3px] [&amp;amp;&amp;gt;svg]:absolute [&amp;amp;&amp;gt;svg]:left-4 [&amp;amp;&amp;gt;svg]:top-4 [&amp;amp;&amp;gt;svg]:text-foreground mb-6 border-destructive/50 bg-destructive/10 text-destructive visible" role="alert" data-source-file="src/components/ui/alert/Alert.vue" data-source-line-start="14" data-source-line-end="16" data-v-0632d593=""><!--[--><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide text-destructive lucide-triangle-alert-icon lucide-triangle-alert text-destructive" data-source-file="src/components/common/SafeIcon.vue" data-source-line-start="43" data-source-line-end="49" data-v-0632d593=""><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg><h5 class="mb-1 font-medium leading-none tracking-tight" data-source-file="src/components/ui/alert/AlertTitle.vue" data-source-line-start="11" data-source-line-end="13" data-v-0632d593=""><!--[-->Permanent Action<!--]--></h5><div class="text-sm [&amp;amp;_p]:leading-relaxed" data-source-file="src/components/ui/alert/AlertDescription.vue" data-source-line-start="11" data-source-line-end="13" data-v-0632d593=""><!--[--> This action cannot be undone. The website will be permanently removed from your collection. <!--]--></div><!--]--></div><div class="rounded-lg text-card-foreground shadow-sm border border-border bg-card shadow-card glass-effect visible" data-source-file="src/components/ui/card/Card.vue" data-source-line-start="11" data-source-line-end="20" data-v-0632d593=""><!--[--><div class="flex flex-col gap-y-1.5 p-6 border-b border-border pb-6" data-source-file="src/components/ui/card/CardHeader.vue" data-source-line-start="11" data-source-line-end="13" data-v-0632d593=""><!--[--><div class="flex items-start gap-4" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="96" data-source-line-end="106" data-v-0632d593=""><div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-destructive/20 to-destructive/10 flex items-center justify-center text-4xl flex-shrink-0 glass-effect" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="97" data-source-line-end="99" data-v-0632d593="">🌐</div><div class="flex-1 min-w-0" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="100" data-source-line-end="105" data-v-0632d593=""><h3 class="font-semibold tracking-tight text-2xl mb-2" data-source-file="src/components/ui/card/CardTitle.vue" data-source-line-start="11" data-source-line-end="17" data-v-0632d593=""><!--[-->Delete Website?<!--]--></h3><p class="text-muted-foreground text-base" data-source-file="src/components/ui/card/CardDescription.vue" data-source-line-start="11" data-source-line-end="13" data-v-0632d593=""><!--[--> You are about to delete the following website from your collection: <!--]--></p></div></div><!--]--></div><div class="p-6 pt-6" data-source-file="src/components/ui/card/CardContent.vue" data-source-line-start="11" data-source-line-end="13" data-v-0632d593=""><!--[--><div class="space-y-6 mb-8" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="111" data-source-line-end="177" data-v-0632d593=""><div class="space-y-2" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="113" data-source-line-end="120" data-v-0632d593=""><label class="text-sm font-semibold text-muted-foreground uppercase tracking-wide" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="114" data-source-line-end="116" data-v-0632d593=""> Website Name </label><p class="text-xl font-bold text-foreground" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="117" data-source-line-end="119" data-v-0632d593="">Black Cat Net</p></div><div class="space-y-2" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="123" data-source-line-end="136" data-v-0632d593=""><label class="text-sm font-semibold text-muted-foreground uppercase tracking-wide" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="124" data-source-line-end="126" data-v-0632d593=""> URL </label><a href="https://link3.cc/jaeo" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all flex items-center gap-2" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="127" data-source-line-end="135" data-v-0632d593=""><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-source-file="src/components/common/SafeIcon.vue" data-source-line-start="43" data-source-line-end="49" data-v-0632d593="" class="lucide lucide-link-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> https://link3.cc/jaeo</a></div><div class="space-y-2" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="139" data-source-line-end="156" data-v-0632d593=""><label class="text-sm font-semibold text-muted-foreground uppercase tracking-wide" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="140" data-source-line-end="142" data-v-0632d593=""> Categories </label><div class="flex flex-wrap gap-2" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="143" data-source-line-end="155" data-v-0632d593=""><!--[--><div class="border focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold transition-all" data-source-file="src/components/ui/badge/Badge.vue" data-source-line-start="14" data-source-line-end="16" data-v-0632d593=""><!--[--><!----><span data-source-file="src/components/common/CategoryBadge.vue" data-source-line-start="54" data-source-line-end="54">Design Resources</span><!--]--></div><!--]--><div class="border focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold transition-all text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800" data-source-file="src/components/ui/badge/Badge.vue" data-source-line-start="14" data-source-line-end="16" data-v-0632d593=""><!--[--><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-source-file="src/components/common/SafeIcon.vue" data-source-line-start="43" data-source-line-end="49" class="lucide lucide-building-icon lucide-building"><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M12 6h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M16 6h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path><path d="M8 6h.01"></path><path d="M9 22v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"></path><rect x="4" y="2" width="16" height="20" rx="2"></rect></svg><span data-source-file="src/components/common/CategoryBadge.vue" data-source-line-start="54" data-source-line-end="54">Internal</span><!--]--></div></div></div><div class="grid grid-cols-2 gap-4 p-4 rounded-lg bg-muted/30 border border-border" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="159" data-source-line-end="176" data-v-0632d593=""><div class="space-y-1" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="160" data-source-line-end="167" data-v-0632d593=""><p class="text-xs text-muted-foreground uppercase tracking-wide font-semibold" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="161" data-source-line-end="163" data-v-0632d593=""> Total Visits </p><p class="text-2xl font-bold text-foreground" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="164" data-source-line-end="166" data-v-0632d593="">15</p></div><div class="space-y-1" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="168" data-source-line-end="175" data-v-0632d593=""><p class="text-xs text-muted-foreground uppercase tracking-wide font-semibold" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="169" data-source-line-end="171" data-v-0632d593=""> Last Visited </p><p class="text-lg font-semibold text-foreground" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="172" data-source-line-end="174" data-v-0632d593="">2025-12-15</p></div></div></div><div class="p-4 rounded-lg bg-destructive/5 border border-destructive/20 mb-8" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="180" data-source-line-end="186" data-v-0632d593=""><p class="text-sm text-foreground" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="181" data-source-line-end="185" data-v-0632d593=""><span class="font-semibold" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="182" data-source-line-end="182" data-v-0632d593="">Are you absolutely sure?</span> This will permanently delete <span class="font-bold text-destructive" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="183" data-source-line-end="183" data-v-0632d593="">Black Cat Net</span> from your collection. This action cannot be reversed. </p></div><div class="flex gap-3 justify-end" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="189" data-source-line-end="213" data-v-0632d593=""><button class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;amp;_svg]:pointer-events-none [&amp;amp;_svg]:size-4 [&amp;amp;_svg]:shrink-0 bg-transparent hover:text-accent-foreground h-11 px-6 py-3 rounded-lg border border-border hover:bg-muted transition-all" data-source-file="src/components/ui/button/Button.vue" data-source-line-start="21" data-source-line-end="27" data-v-0632d593=""><!--[--><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide mr-2 lucide-x-icon lucide-x mr-2" data-source-file="src/components/common/SafeIcon.vue" data-source-line-start="43" data-source-line-end="49" data-v-0632d593=""><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg> Cancel <!--]--></button><button class="justify-center whitespace-nowrap text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;amp;_svg]:pointer-events-none [&amp;amp;_svg]:size-4 [&amp;amp;_svg]:shrink-0 h-11 px-6 py-3 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2" data-source-file="src/components/ui/button/Button.vue" data-source-line-start="21" data-source-line-end="27" data-v-0632d593=""><!--[--><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2-icon lucide-trash-2" data-source-file="src/components/common/SafeIcon.vue" data-source-line-start="43" data-source-line-end="49" data-v-0632d593=""><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Confirm Delete<!--]--></button></div><!--]--></div><!--]--></div><div class="mt-6 p-4 rounded-lg bg-muted/20 border border-border text-sm text-muted-foreground text-center" data-source-file="src/components/delete-website-confirmation/DeleteWebsiteConfirmation.vue" data-source-line-start="218" data-source-line-end="221" data-v-0632d593=""><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide inline mr-2 lucide-info-icon lucide-info inline mr-2" data-source-file="src/components/common/SafeIcon.vue" data-source-line-start="43" data-source-line-end="49" data-v-0632d593=""><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg> This action will only remove the website from your collection. The actual website will not be affected. </div></div><!--astro:end--></astro-island>
+  </main>
+
+  <script>
+    const originalBack = window.history.back
+    const originalForward = window.history.forward
+    const originalGo = window.history.go
+    function isValidNavigation(){
+      if(!window.parent.history.state.back || !window.parent.history.state.back.startsWith(&#39;/designPage&#39;)){
+        return false
+      }
+      return true
+    }
+    window.history.back = function(...args) {
+      if(!isValidNavigation()){
+        return
+      }
+      return originalBack.apply(this, args);
+    };
+
+    window.history.forward = function(...args) {
+      if(!isValidNavigation()){
+        return
+      }
+      return originalForward.apply(this, args);
+    };
+
+    window.history.go = function(...args) {
+      if(!isValidNavigation()){
+        return
+      }
+      return originalGo.apply(this, args);
+    };
+  </script></body></html>'></iframe>
+                    </div>
+                  </div>
+
+                </body>
+                </html>
+            
